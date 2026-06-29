@@ -1,1 +1,1 @@
-web: python shopify.py
+web: gunicorn --workers 4 --threads 2 --timeout 120 shopify:app
