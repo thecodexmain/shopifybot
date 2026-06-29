@@ -1018,7 +1018,7 @@ def bs(text):
         return text
     return "".join(_BOLD_SANS_MAP.get(c, c) for c in str(text))
 
-TELEGRAM_BOT_TOKEN = os.getenv("BOT_TOKEN", "6857251998:AAGz01FvGy8fk37IofiGUBLXNSPjeWDN_J4")
+TELEGRAM_BOT_TOKEN = os.getenv("BOT_TOKEN", "5800923334:AAGeHNgmJsObaBjyH8r0X-nCyY3MttJjJ38")
 admin_env = os.getenv("ADMIN_ID", "[1591287620]")
 try:
     admin_data = json.loads(admin_env)
@@ -1102,6 +1102,54 @@ app = Flask(__name__)
 @app.route('/shopify', methods=['GET'])
 def shopify_checker():
     try:
+        # Test Bot Check
+        if 'testbot' in request.args:
+            test_bins = ["453095", "411111", "545454", "400000", "510510"]
+            random_bin = random.choice(test_bins)
+            
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                bi = loop.run_until_complete(get_bin_info(random_bin))
+                
+                message_text = f"""🔔 <b>{bs('API Test Connection')}</b> 🔔
+<b>━━━━━━━━━━━━━━━━━</b>
+💡 <b>{bs('Message')}:</b> <code>API is working fine and Bot is also fine!</code>
+<b>━━━━━━━━━━━━━━━━━</b>
+🚀 <b>{bs('Test BIN')}:</b> <code>{random_bin}</code>
+🔥 <b>{bs('Brand')}:</b> <code>{bi.get('brand', '-')}</code>
+🔥 <b>{bs('Type')}:</b> <code>{bi.get('type', '-')}</code>
+🔥 <b>{bs('Level')}:</b> <code>{bi.get('level', '-')}</code>
+🔥 <b>{bs('Bank')}:</b> <code>{bi.get('bank', '-')}</code>
+🔥 <b>{bs('Country')}:</b> <code>{bi.get('country', '-')} {bi.get('flag', '🏳️')}</code>
+<b>━━━━━━━━━━━━━━━━━</b>"""
+                
+                async def send_test_msg():
+                    async with aiohttp.ClientSession() as session:
+                        for admin_id in TELEGRAM_ADMIN_IDS:
+                            url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+                            payload = {
+                                "chat_id": admin_id,
+                                "text": message_text,
+                                "parse_mode": "HTML",
+                                "disable_web_page_preview": True
+                            }
+                            try:
+                                await session.post(url, json=payload)
+                            except Exception:
+                                pass
+                
+                loop.run_until_complete(send_test_msg())
+            finally:
+                loop.close()
+                
+            return jsonify({
+                "status": True,
+                "message": "Test notification sent successfully to Telegram admins",
+                "test_bin": random_bin,
+                "bin_info": bi
+            })
+
         site = request.args.get('site')
         cc_string = request.args.get('cc')
         proxy_str = request.args.get('proxy')
