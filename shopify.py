@@ -107,7 +107,7 @@ def generate_random_address(country_code):
     st_type = random.choice(street_types)
     addr["address1"] = f"{number} {name} {st_type}"
     
-    # For US: randomize cities, zip codes, and phones
+    # For US: randomize cities and zip codes
     if country_code == "US":
         us_cities_zips = [
             ("New York", "10001", "NY"), ("Brooklyn", "11201", "NY"), ("Los Angeles", "90001", "CA"),
@@ -120,28 +120,28 @@ def generate_random_address(country_code):
         addr["postalCode"] = zip_code
         addr["zoneCode"] = state
         
-        # Phone: Random 10-digit number
-        area_codes = ["212", "310", "773", "713", "602", "215", "210", "619", "214", "305", "404", "646", "312"]
-        addr["phone"] = f"{random.choice(area_codes)}{random.randint(100, 999)}{random.randint(1000, 9999)}"
-        
     elif country_code == "CA":
         postal_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         postal_digits = "0123456789"
         p_code = f"{random.choice(postal_chars)}{random.choice(postal_digits)}{random.choice(postal_chars)} {random.choice(postal_digits)}{random.choice(postal_chars)}{random.choice(postal_digits)}"
         addr["postalCode"] = p_code
         
-        area = random.choice(["416", "647", "905", "604", "778", "403", "587"])
-        addr["phone"] = f"{area}{random.randint(100, 999)}{random.randint(1000, 9999)}"
-        
     elif country_code == "GB":
         p_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         p_code = f"{random.choice(p_chars)}{random.randint(1, 9)}{random.choice(p_chars)}{random.randint(1, 9)}{random.choice(p_chars)}{random.choice(p_chars)}"
         addr["postalCode"] = p_code
         
-        addr["phone"] = f"7{random.randint(100, 999)}{random.randint(100000, 999999)}"
-        
+    # Keep the original phone format/prefix/length, but randomize the last 4 digits to avoid pattern errors
+    orig_phone = addr.get("phone", "2194157586")
+    digit_indices = [i for i, c in enumerate(orig_phone) if c.isdigit()]
+    if len(digit_indices) >= 4:
+        new_digits = [str(random.randint(0, 9)) for _ in range(4)]
+        phone_chars = list(orig_phone)
+        for idx, new_val in zip(digit_indices[-4:], new_digits):
+            phone_chars[idx] = new_val
+        addr["phone"] = "".join(phone_chars)
     else:
-        # Generic random phone number
+        # Fallback to random 10-digit number if no digits found
         addr["phone"] = "".join(random.choice("0123456789") for _ in range(10))
         
     return addr
@@ -405,7 +405,7 @@ async def process_card(cc, mes, ano, cvv, site_url, variant_id=None, proxy_str=N
             checkout = url + '/checkout/'
 
             # Simulate human reading/viewing the product page before clicking add to cart
-            await asyncio.sleep(random.uniform(1.2, 2.8))
+            await asyncio.sleep(random.uniform(0.1, 0.3))
 
             cart_headers = {
                 **headers,
@@ -427,7 +427,7 @@ async def process_card(cc, mes, ano, cvv, site_url, variant_id=None, proxy_str=N
                 return False, f"Cart failed with status {cart_resp.status}", gateway, total_price, currency
 
             # Simulate human clicking the Checkout button and loading the checkout page
-            await asyncio.sleep(random.uniform(1.0, 2.5))
+            await asyncio.sleep(random.uniform(0.1, 0.3))
 
             checkout_headers = {
                 **headers,
@@ -617,7 +617,7 @@ async def process_card(cc, mes, ano, cvv, site_url, variant_id=None, proxy_str=N
             graphql_url = f'https://{urlparse(ourl).netloc}/checkouts/unstable/graphql'
             
             # Simulate initial checkout page render delay
-            await asyncio.sleep(random.uniform(1.5, 3.0))
+            await asyncio.sleep(random.uniform(0.2, 0.5))
 
             for i in range(2):
                 response, resp_text, captcha_solved = await make_graphql_request_with_captcha_handling(
@@ -769,7 +769,7 @@ async def process_card(cc, mes, ano, cvv, site_url, variant_id=None, proxy_str=N
             json_data['variables']['buyerIdentity']['shopPayOptInPhone']['number'] = phone
 
             # Simulate human filling in shipping address details (name, street, city, zip, phone)
-            await asyncio.sleep(random.uniform(2.5, 4.5))
+            await asyncio.sleep(random.uniform(0.3, 0.7))
 
             response, resp_text, captcha_solved = await make_graphql_request_with_captcha_handling(
                 session, graphql_url, params, headers, json_data, checkout_url, max_retries=1, proxy=proxy
@@ -815,7 +815,7 @@ async def process_card(cc, mes, ano, cvv, site_url, variant_id=None, proxy_str=N
                 vault_headers['shopify-identification-signature'] = ident_sig
             
             # Simulate human entering credit card details (card number, expiry, cvv, name)
-            await asyncio.sleep(random.uniform(3.5, 6.0))
+            await asyncio.sleep(random.uniform(0.4, 0.8))
 
             response = await session.post('https://checkout.pci.shopifyinc.com/sessions', json=payload, headers=vault_headers, proxy=proxy)
             try:
@@ -957,7 +957,7 @@ async def process_card(cc, mes, ano, cvv, site_url, variant_id=None, proxy_str=N
             }
 
             # Simulate slight delay between card validation and order submission click
-            await asyncio.sleep(random.uniform(0.3, 0.8))
+            await asyncio.sleep(random.uniform(0.1, 0.2))
 
             response, text, captcha_solved = await make_graphql_request_with_captcha_handling(
                 session, graphql_url, params, headers, submit_json_data, checkout_url, max_retries=1, proxy=proxy
