@@ -1018,8 +1018,8 @@ def bs(text):
         return text
     return "".join(_BOLD_SANS_MAP.get(c, c) for c in str(text))
 
-TELEGRAM_BOT_TOKEN = os.getenv("BOT_TOKEN", "5800923334:AAGeHNgmJsObaBjyH8r0X-nCyY3MttJjJ38")
-admin_env = os.getenv("ADMIN_ID", "[1591287620]")
+TELEGRAM_BOT_TOKEN = os.getenv("BOT_TOKEN", "8872090752:AAGIlAir7M55twnEb7rg7cF7PENz2lxae9U")
+admin_env = os.getenv("ADMIN_ID", "[8826365014]")
 try:
     admin_data = json.loads(admin_env)
     if isinstance(admin_data, list):
